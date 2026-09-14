@@ -62,6 +62,7 @@ with col1:
   )
   ax1.set_xlabel("Bulan")
   ax1.set_ylabel("Total Pendapatan")
+  ax1.set_xticks(sorted(revenue_trend['order_month_num'].unique()))
   ax1.legend(title='Kategori Produk', bbox_to_anchor=(1.05, 1), loc='upper left')
   plt.tight_layout()
   st.pyplot(fig1)
