@@ -1,6 +1,5 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
 import streamlit as st
 
 # konfiggurasi halaman streamlit
@@ -25,8 +24,17 @@ selected_year = st.sidebar.selectbox("Pilih Tahun Transaksi:", year_list, index=
 # slider untuk memilih jumlah top kategori
 top_n = st.sidebar.slider("Pilih Jumlah Kategori Terlaris:", min_value=1, max_value=5, value=3)
 
-# memfilter data utama berdasarkan tahun yang dipilih
-filtered_df = main_df[main_df['order_year'] == selected_year]
+# filter rentang bulan transaksi
+min_month = int(main_df['order_month_num'].min())
+max_month = int(main_df['order_month_num'].max())
+selected_months = st.sidebar.slider("Pilih Rentang Bulan:", min_value=min_month, max_value=max_month, value=(min_month, max_month))
+
+# memfilter data utama berdasarkan tahun dan rentang yang dipilih
+filtered_df = main_df[
+   (main_df['order_year'] == selected_year) &
+   (main_df['order_month_num'] >= selected_months[0]) &
+   (main_df['order_month_num'] <= selected_months[1])
+]
 
 # mengambil kategori teratas
 top_categories = filtered_df['product_category_name'].value_counts().head(top_n).index.tolist()
@@ -44,43 +52,45 @@ state_orders = state_orders.sort_values(by='order_id', ascending=False)
 
 # membangun antarmuka dashboard
 st.title("E-Commerce Public Dataset Dashboard")
-st.markdown(f"Menampilkan tren pendapatan dan distribusi untuk **Top {top_n} Kategori Produk** pada tahun **{selected_year}**.")
+st.markdown(f"Menampilkan tren pendapatan dan distribusi untuk **Top {top_n} Kategori Produk** pada tahun **{selected_year}** (Bulan {selected_months[0]} - {selected_months[1]}).")
 
 # membagi layout mrnjadi 2 kolom
 col1, col2 = st.columns(2)
 
 with col1:
-  st.subheader("Tren Pendapatan Bulanan")
-  fig1, ax1 = plt.subplots(figsize=(10, 6))
-  sns.lineplot(
-      data=revenue_trend,
-      x='order_month_num',
-      y='total_revenue',
-      hue='product_category_name',
-      marker='o',
-      ax=ax1
-  )
-  ax1.set_xlabel("Bulan")
-  ax1.set_ylabel("Total Pendapatan")
-  ax1.set_xticks(sorted(revenue_trend['order_month_num'].unique()))
-  ax1.legend(title='Kategori Produk', bbox_to_anchor=(1.05, 1), loc='upper left')
-  plt.tight_layout()
-  st.pyplot(fig1)
+    st.subheader("Tren Pendapatan Bulanan")
+    # Plotly Line Chart
+    fig1 = px.line(
+        revenue_trend, 
+        x='order_month_num', 
+        y='total_revenue', 
+        color='product_category_name',
+        markers=True,
+        labels={
+            'order_month_num': 'Bulan', 
+            'total_revenue': 'Total Pendapatan (BRL)', 
+            'product_category_name': 'Kategori Produk'
+        }
+    )
+    # memastikan sumbu X menampilkan angka bulan bulat
+    fig1.update_xaxes(dtick=1) 
+    st.plotly_chart(fig1, use_container_width=True)
 
 with col2:
-  st.subheader("Negara bagian dengan Pesanan Terbanyak")
-  fig2, ax2 = plt.subplots(figsize=(10, 6))
-  sns.barplot(
-      data=state_orders.head(10),
-      x='order_id',
-      y='customer_state', 
-      hue='customer_state', 
-      palette='viridis', 
-      legend=False, 
-      ax=ax2
-  )
-  ax2.set_xlabel("Total Pesanan")
-  ax2.set_ylabel("Negara Bagian")
-  st.pyplot(fig2)
+    st.subheader("Negara Bagian dengan Pesanan Terbanyak")
+    # Plotly Bar Chart
+    fig2 = px.bar(
+        state_orders.head(10), 
+        x='order_id', 
+        y='customer_state', 
+        color='customer_state',
+        orientation='h',
+        labels={
+            'order_id': 'Total Pesanan', 
+            'customer_state': 'Negara Bagian'
+        }
+    )
+    fig2.update_layout(yaxis={'categoryorder':'total ascending'}, showlegend=False)
+    st.plotly_chart(fig2, use_container_width=True)
   
 st.caption("Proyek Analisis Data Asah Dicoding 2026")
